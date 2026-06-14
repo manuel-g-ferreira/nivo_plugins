@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "identifier": "mockcgm",
+  "displayName": "Mock CGM",
+  "version": "1.0.0",
+  "author": "Nivo",
+  "requiresLogin": false,
+  "iconName": "mock",
+  "capabilities": {
+    "supportsMultipleDataSources": false,
+    "supportsHistory": true,
+    "maxHistoryHours": 24,
+    "supportsSpecialValues": false,
+    "requiresRegionSelection": false,
+    "supportsCombinedFetch": true,
+    "apiVersion": "1"
+  }
+}

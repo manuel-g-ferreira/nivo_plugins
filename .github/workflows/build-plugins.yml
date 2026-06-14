@@ -1,0 +1,99 @@
+# Reusable plugin build matrix (MockCGM, LibreLink, Nightscout × macOS/Windows/Linux).
+# Called by plugins.yml and release.yml.
+
+name: Build plugins
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Package .nivoplugin after build
+        type: boolean
+        default: false
+      upload_artifacts:
+        description: Upload build outputs as workflow artifacts
+        type: boolean
+        default: false
+      artifact_prefix:
+        description: Prefix for artifact names (release builds)
+        type: string
+        default: ""
+      version:
+        description: Release version (required when package and upload_artifacts are true)
+        type: string
+        default: ""
+
+jobs:
+  build:
+    name: Build · ${{ matrix.plugin }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: [MockCGM, LibreLink, Nightscout]
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/dart-setup
+
+      - name: Build plugin binary (with package)
+        if: inputs.package
+        run: dart run tool/glucose_plugin.dart build "plugins/${{ matrix.plugin }}"
+
+      - name: Build plugin binary
+        if: ${{ !inputs.package }}
+        run: dart run tool/glucose_plugin.dart build --no-package "plugins/${{ matrix.plugin }}"
+
+      - name: Stage release package
+        if: inputs.package && inputs.upload_artifacts
+        env:
+          PLUGIN: ${{ matrix.plugin }}
+          VERSION: ${{ inputs.version }}
+          PLATFORM: ${{ runner.os == 'macOS' && 'macos' || (runner.os == 'Windows' && 'windows' || 'linux') }}
+        run: |
+          test -n "$VERSION"
+          ID="$(python3 -c "import json; print(json.load(open('plugins/$PLUGIN/plugin.json'))['identifier'])")"
+          mkdir -p release-packages
+          cp "plugins/$PLUGIN/dist/${ID}.nivoplugin" \
+            "release-packages/NivoPlugins-${VERSION}-${ID}-${PLATFORM}.nivoplugin"
+
+      - name: Upload plugin binary
+        if: inputs.upload_artifacts && !inputs.package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact_prefix }}-${{ matrix.plugin }}-${{ runner.os }}
+          path: plugins/${{ matrix.plugin }}/bin/*/
+
+      - name: Upload release package
+        if: inputs.upload_artifacts && inputs.package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact_prefix }}-${{ matrix.plugin }}-${{ runner.os }}
+          path: release-packages/NivoPlugins-*.nivoplugin
+
+  integration:
+    name: Integration (protocol smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/dart-setup
+
+      - name: Build MockCGM
+        run: dart run tool/glucose_plugin.dart build --no-package plugins/MockCGM
+
+      - name: Build LibreLink
+        run: dart run tool/glucose_plugin.dart build --no-package plugins/LibreLink
+
+      - name: Build Nightscout
+        run: dart run tool/glucose_plugin.dart build --no-package plugins/Nightscout
+
+      - name: MockCGM getPluginInfo
+        run: echo '{"command":"getPluginInfo"}' | plugins/MockCGM/bin/linux-x64/mock-cgm | head -1 | grep -q '"success":true'
+
+      - name: LibreLink getPluginInfo
+        run: echo '{"command":"getPluginInfo"}' | plugins/LibreLink/bin/linux-x64/librelink-plugin | head -1 | grep -q '"librelink"'
+
+      - name: Nightscout getPluginInfo
+        run: echo '{"command":"getPluginInfo"}' | plugins/Nightscout/bin/linux-x64/nightscout-plugin | head -1 | grep -q '"nightscout"'

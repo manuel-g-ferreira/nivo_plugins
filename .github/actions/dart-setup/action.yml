@@ -1,0 +1,31 @@
+name: Dart setup
+description: Cache pub deps and resolve nivo_plugins tool + plugin packages
+
+runs:
+  using: composite
+  steps:
+    - uses: dart-lang/setup-dart@v1
+      with:
+        sdk: "3.12.0"
+
+    - name: Cache pub dependencies
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.pub-cache
+          .dart_tool
+          plugins/LibreLink/.dart_tool
+          plugins/Nightscout/.dart_tool
+          plugins/MockCGM/.dart_tool
+        key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'plugins/LibreLink/pubspec.lock', 'plugins/Nightscout/pubspec.lock', 'plugins/MockCGM/pubspec.lock') }}
+        restore-keys: |
+          pub-${{ runner.os }}-
+
+    - name: Resolve dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        dart pub get
+        for dir in plugins/LibreLink plugins/Nightscout plugins/MockCGM; do
+          (cd "$dir" && dart pub get)
+        done

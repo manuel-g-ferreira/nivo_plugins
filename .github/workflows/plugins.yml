@@ -1,0 +1,39 @@
+# Build CGM plugins (Option A — frozen binary per platform)
+# See docs/AUTHORING.md and docs/ci/README.md
+
+name: Plugins
+
+on:
+  pull_request:
+    paths:
+      - "plugins/**"
+      - "tool/**"
+      - "lib/**"
+      - "test/**"
+      - ".github/workflows/plugins.yml"
+      - ".github/workflows/ci-checks.yml"
+      - ".github/workflows/build-plugins.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/prepare-release.yml"
+      - ".github/actions/dart-setup/**"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/**"
+      - "tool/**"
+      - "lib/**"
+      - "test/**"
+      - ".github/workflows/plugins.yml"
+      - ".github/workflows/ci-checks.yml"
+      - ".github/workflows/build-plugins.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/prepare-release.yml"
+      - ".github/actions/dart-setup/**"
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci-checks.yml
+
+  build:
+    needs: checks
+    uses: ./.github/workflows/build-plugins.yml

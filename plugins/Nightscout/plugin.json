@@ -1,0 +1,13 @@
+{
+  "identifier": "nightscout",
+  "displayName": "Nightscout",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "author": "Nivo",
+  "entry": {
+    "darwin-arm64": "bin/darwin-arm64/nightscout-plugin",
+    "darwin-x64": "bin/darwin-x64/nightscout-plugin",
+    "windows-x64": "bin/windows-x64/nightscout-plugin.exe",
+    "linux-x64": "bin/linux-x64/nightscout-plugin"
+  }
+}

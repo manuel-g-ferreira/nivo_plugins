@@ -1,0 +1,126 @@
+# nivo_plugins — tagged release (stable & beta).
+# Stable: v1.2.3  →  prerelease=false
+# Beta:    v1.3.0-beta.1  →  prerelease=true
+# See docs/ci/README.md
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag (e.g. v1.0.1-beta.1)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (e.g. v1.0.1-beta.1)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  metadata:
+    name: Release metadata
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.chan.outputs.channel }}
+      prerelease: ${{ steps.chan.outputs.prerelease }}
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Resolve dependencies
+        uses: ./.github/actions/dart-setup
+
+      - name: Determine release channel
+        id: chan
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          if echo "$TAG" | grep -qE '-beta(\.|$|-)'; then
+            echo "channel=beta" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "channel=stable" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse version from tag
+        id: ver
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Validate pubspec version
+        run: |
+          set -euo pipefail
+          PUB_VER=$(grep '^version:' pubspec.yaml | sed 's/version: *//')
+          TAG_VER="${{ steps.ver.outputs.version }}"
+          if [ "$PUB_VER" != "$TAG_VER" ]; then
+            echo "pubspec version ($PUB_VER) must match tag ($TAG_VER)"
+            exit 1
+          fi
+
+      - name: Validate changelog entry
+        run: |
+          set -euo pipefail
+          dart run tool/release.dart changelog extract "${{ steps.ver.outputs.version }}" | head -1 >/dev/null
+
+  ci-checks:
+    needs: metadata
+    uses: ./.github/workflows/ci-checks.yml
+
+  build:
+    needs: [metadata, ci-checks]
+    uses: ./.github/workflows/build-plugins.yml
+    with:
+      package: true
+      upload_artifacts: true
+      artifact_prefix: nivo-plugins-${{ needs.metadata.outputs.version }}
+      version: ${{ needs.metadata.outputs.version }}
+
+  publish:
+    name: Publish GitHub release
+    needs: [metadata, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.metadata.outputs.tag }}
+
+      - name: Resolve dependencies
+        uses: ./.github/actions/dart-setup
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Stage release assets
+        run: dart run tool/release.dart publish stage --dist dist --output release
+
+      - name: Write release notes
+        run: dart run tool/release.dart changelog extract "${{ needs.metadata.outputs.version }}" > release-notes.md
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.metadata.outputs.tag }}
+          prerelease: ${{ needs.metadata.outputs.prerelease == 'true' }}
+          generate_release_notes: false
+          body_path: release-notes.md
+          files: release/**
+          name: Nivo Plugins ${{ needs.metadata.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,64 @@
+# After a release/* PR merges to main: tag, push tag, build, publish GitHub Release.
+# See docs/ci/README.md
+
+name: Finish release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finish-release-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: false
+
+jobs:
+  finish:
+    name: Tag and publish release
+    if: |
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Resolve dependencies
+        uses: ./.github/actions/dart-setup
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate release branch version
+        run: |
+          set -euo pipefail
+          BRANCH_VER="${{ github.event.pull_request.head.ref }}"
+          BRANCH_VER="${BRANCH_VER#release/}"
+          PUB_VER=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | cut -d+ -f1)
+          if [ "$BRANCH_VER" != "$PUB_VER" ]; then
+            echo "Branch release/$BRANCH_VER does not match pubspec $PUB_VER" >&2
+            exit 1
+          fi
+
+      - name: Create and push tag
+        id: tag
+        run: |
+          dart run tool/release.dart tag
+          git push origin "${{ steps.tag.outputs.tag }}"
+
+  release:
+    name: Build and publish release
+    needs: finish
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.finish.outputs.tag }}
+    secrets: inherit

@@ -1,0 +1,13 @@
+{
+  "identifier": "librelink",
+  "displayName": "LibreLink Up",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "author": "Nivo",
+  "entry": {
+    "darwin-arm64": "bin/darwin-arm64/librelink-plugin",
+    "darwin-x64": "bin/darwin-x64/librelink-plugin",
+    "windows-x64": "bin/windows-x64/librelink-plugin.exe",
+    "linux-x64": "bin/linux-x64/librelink-plugin"
+  }
+}

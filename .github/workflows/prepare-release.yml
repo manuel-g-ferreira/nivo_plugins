@@ -1,0 +1,85 @@
+# Opens a release PR: bump version and changelog on release/* (no tag, no push to main).
+# After merge, finish-release.yml tags and runs release.yml.
+# See docs/ci/README.md
+
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        type: choice
+        options:
+          - stable
+          - beta
+        default: stable
+      bump:
+        description: Semver bump from the latest stable tag
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare ${{ inputs.channel }} release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve dependencies
+        uses: ./.github/actions/dart-setup
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and changelog
+        id: prep
+        run: |
+          dart run tool/release.dart prepare \
+            --channel "${{ inputs.channel }}" \
+            --bump "${{ inputs.bump }}" \
+            --no-tag
+
+      - name: Open release pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.prep.outputs.version }}
+          TAG: ${{ steps.prep.outputs.tag }}
+        run: |
+          set -euo pipefail
+          BRANCH="release/${VERSION}"
+
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+
+          {
+            echo "## Release ${VERSION}"
+            echo
+            echo "- Bumps versions in \`pubspec.yaml\`, \`CHANGELOG.md\`, and all plugins"
+            echo "- Tag \`${TAG}\` is created **after merge** by Finish release"
+            echo "- Builds and GitHub Release assets run automatically once tagged"
+            echo
+            echo "Review the changelog, edit this branch if needed, then **merge** to publish."
+          } > /tmp/release-pr-body.md
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Release ${VERSION}" \
+            --body-file /tmp/release-pr-body.md
