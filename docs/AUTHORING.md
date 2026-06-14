@@ -161,7 +161,7 @@ After `authenticate`, store tokens in plugin memory. Use `authToken`, `userId`, 
 }
 ```
 
-Host uses these for UI (multi-connection, history window, region picker).
+Host uses these for history window and multi-connection UI. Declare sign-in fields (region, credentials, URL) in `getPluginInfo.signIn` — see [PLUGIN-PROTOCOL-V1.md](PLUGIN-PROTOCOL-V1.md).
 
 ## Install location (end users)
 

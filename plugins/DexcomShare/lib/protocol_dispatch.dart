@@ -25,6 +25,28 @@ abstract final class ProtocolDispatch {
         'authKind': 'emailPassword',
         'apiVersion': '1',
       },
+      'signIn': {
+        'hint':
+            'Requires Dexcom Share enabled and at least one follower in the Dexcom app.',
+        'fields': [
+          {
+            'key': 'region',
+            'type': 'select',
+            'label': 'Region',
+            'options': [
+              {'value': 'us', 'label': 'United States'},
+              {'value': 'ous', 'label': 'Outside US'},
+            ],
+          },
+          {
+            'key': 'username',
+            'type': 'text',
+            'label': 'Email',
+            'textInput': 'email',
+          },
+          {'key': 'password', 'type': 'secret', 'label': 'Password'},
+        ],
+      },
     };
   }
 

@@ -25,6 +25,22 @@ abstract final class ProtocolDispatch {
         'authKind': 'urlSecret',
         'apiVersion': '1',
       },
+      'signIn': {
+        'fields': [
+          {
+            'key': 'username',
+            'type': 'text',
+            'label': 'Site URL',
+            'textInput': 'url',
+          },
+          {'key': 'password', 'type': 'secret', 'label': 'API Secret'},
+          {
+            'key': 'accessToken',
+            'type': 'secret',
+            'label': 'Access token (optional)',
+          },
+        ],
+      },
     };
   }
 

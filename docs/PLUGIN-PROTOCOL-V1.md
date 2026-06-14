@@ -65,9 +65,50 @@ Passed on `getDataSources`, `getCurrentReading`, `getHistory`:
 | `supportsHistory` | bool | `getHistory` implemented |
 | `maxHistoryHours` | int | Max `hours` argument |
 | `supportsSpecialValues` | bool | LO/HI in readings |
-| `requiresRegionSelection` | bool | Host shows region in plugin settings |
+| `requiresRegionSelection` | bool | Legacy hint; prefer `signIn` with a `select` field |
 | `apiVersion` | string | Must be `"1"` for host |
 | `supportsCombinedFetch` | bool | Implements `fetchReadings` (see below) |
+| `authKind` | string | Legacy fallback when `signIn` is omitted: `emailPassword` or `urlSecret` |
+
+Optional **`signIn`** object — declarative sign-in form rendered by the host (no plugin-specific UI in Nivo):
+
+```json
+"signIn": {
+  "hint": "Optional note shown above the form",
+  "fields": [
+    {
+      "key": "region",
+      "type": "select",
+      "label": "Region",
+      "options": [
+        {"value": "us", "label": "United States"},
+        {"value": "eu", "label": "Europe"}
+      ]
+    },
+    {
+      "key": "username",
+      "type": "text",
+      "label": "Email",
+      "textInput": "email"
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": "Password"
+    }
+  ]
+}
+```
+
+| Field property | Type | Meaning |
+|----------------|------|---------|
+| `key` | string | Setting key. `username` and `password` map to `authenticate` credentials; other keys (e.g. `region`, `accessToken`) are stored in host `pluginSettings` and sent as `options`. |
+| `type` | string | `text`, `secret`, or `select` |
+| `label` | string | Field label (plugin-localized) |
+| `textInput` | string | Optional keyboard hint: `email`, `url`, `number` |
+| `options` | array | For `select`: `[{ "value", "label" }, …]` |
+
+When `signIn` is present, the host renders it instead of inferring fields from `authKind`. Plugins should declare region pickers as a `select` field with key `region` rather than relying on `requiresRegionSelection` alone.
 
 **LibreLink plugin example:** `identifier: "librelink"`, `requiresRegionSelection: true`, `supportsMultipleDataSources: true`, `maxHistoryHours: 24`, `supportsCombinedFetch: true`.
 

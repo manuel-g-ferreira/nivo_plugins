@@ -26,6 +26,30 @@ abstract final class ProtocolDispatch {
         'authKind': 'emailPassword',
         'apiVersion': '1',
       },
+      'signIn': {
+        'fields': [
+          {
+            'key': 'region',
+            'type': 'select',
+            'label': 'Region',
+            'options': [
+              {'value': 'us', 'label': 'United States'},
+              {'value': 'eu', 'label': 'Europe'},
+              {'value': 'de', 'label': 'Germany'},
+              {'value': 'fr', 'label': 'France'},
+              {'value': 'jp', 'label': 'Japan'},
+              {'value': 'au', 'label': 'Australia'},
+            ],
+          },
+          {
+            'key': 'username',
+            'type': 'text',
+            'label': 'Email',
+            'textInput': 'email',
+          },
+          {'key': 'password', 'type': 'secret', 'label': 'Password'},
+        ],
+      },
     };
   }
 
