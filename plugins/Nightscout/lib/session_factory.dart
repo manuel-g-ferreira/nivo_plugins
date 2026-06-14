@@ -45,13 +45,17 @@ abstract final class SessionFactory {
     }
     final token = options['accessToken'];
     final hash = options['apiSecretHash'];
-    if ((hash == null || hash.isEmpty) && (token == null || token.isEmpty)) {
+    final bearer = options['bearerToken'];
+    if ((hash == null || hash.isEmpty) &&
+        (token == null || token.isEmpty) &&
+        (bearer == null || bearer.isEmpty)) {
       return null;
     }
     return NightscoutHttp(
       baseUrl: normalized,
       apiSecretHash: hash,
       accessToken: token,
+      bearerToken: bearer,
     );
   }
 

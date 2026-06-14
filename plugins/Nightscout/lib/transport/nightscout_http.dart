@@ -5,11 +5,17 @@ import 'package:nightscout_plugin/nightscout_exception.dart';
 
 /// HTTP to a single Nightscout site base URL.
 class NightscoutHttp {
-  NightscoutHttp({required this.baseUrl, this.apiSecretHash, this.accessToken});
+  NightscoutHttp({
+    required this.baseUrl,
+    this.apiSecretHash,
+    this.accessToken,
+    this.bearerToken,
+  });
 
   final String baseUrl;
   final String? apiSecretHash;
   final String? accessToken;
+  final String? bearerToken;
 
   Uri uri(String pathAndQuery) {
     final base = baseUrl.endsWith('/')
@@ -28,6 +34,9 @@ class NightscoutHttp {
     };
     if (apiSecretHash != null && apiSecretHash!.isNotEmpty) {
       map['api-secret'] = apiSecretHash!;
+    }
+    if (bearerToken != null && bearerToken!.isNotEmpty) {
+      map['authorization'] = 'Bearer $bearerToken';
     }
     return map;
   }
