@@ -14,7 +14,7 @@ class AuthenticateAccountEndpoint {
       {
         'accountName': accountName,
         'password': password,
-        'applicationId': DexcomHttp.applicationId,
+        'applicationId': _http.applicationId,
       },
     );
   }

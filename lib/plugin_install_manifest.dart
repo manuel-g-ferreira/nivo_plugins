@@ -36,6 +36,7 @@ class PluginInstallManifest {
   }
 
   static const String embeddedMagic = 'NIVO_PLUGIN_V1';
+
   /// Legacy trailer magic from the GlucoseBar era; still accepted when reading installs.
   static const String _legacyEmbeddedMagic = 'GLUCOBAR_PLUGIN_V1';
   static const String installXattrKey = 'com.nivo.plugin.install';
@@ -83,6 +84,7 @@ class PluginInstallManifest {
   static PluginInstallManifest? resolveForInstall(File source) {
     return readXattr(source.path) ?? readEmbedded(source);
   }
+
   /// Trailer: `[json][u32 length][magic]` (non-macOS only).
   static void embedInExecutable(
     String executablePath,

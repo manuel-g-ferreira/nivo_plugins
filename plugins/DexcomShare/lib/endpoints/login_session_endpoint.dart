@@ -14,7 +14,7 @@ class LoginSessionEndpoint {
       {
         'accountId': accountId,
         'password': password,
-        'applicationId': DexcomHttp.applicationId,
+        'applicationId': _http.applicationId,
       },
     );
   }

@@ -35,7 +35,10 @@ Future<String> ensureMockPluginExecutable() async {
       );
     }
     if (!Platform.isWindows) {
-      await Process.run('chmod', ['+x', outRelative], workingDirectory: mockRoot);
+      await Process.run('chmod', [
+        '+x',
+        outRelative,
+      ], workingDirectory: mockRoot);
     }
   }
   return outFile.absolute.path;

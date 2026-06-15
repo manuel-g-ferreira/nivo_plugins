@@ -70,6 +70,7 @@ dart test
 dart run tool/glucose_plugin.dart build --no-package plugins/MockCGM
 dart run tool/glucose_plugin.dart build --no-package plugins/LibreLink
 dart run tool/glucose_plugin.dart build --no-package plugins/Nightscout
+dart run tool/glucose_plugin.dart build --no-package plugins/DexcomShare
 echo '{"command":"getPluginInfo"}' | plugins/MockCGM/bin/linux-x64/mock-cgm | head -1 | grep -q '"success":true'
 ```
 
@@ -129,6 +130,7 @@ Examples for `1.0.1-beta.1`:
 | MockCGM | `NivoPlugins-1.0.1-beta.1-mockcgm-macos.nivoplugin` | `…-windows.nivoplugin` | `…-linux.nivoplugin` |
 | LibreLink | `…-librelink-macos.nivoplugin` | `…-windows.nivoplugin` | `…-linux.nivoplugin` |
 | Nightscout | `…-nightscout-macos.nivoplugin` | `…-windows.nivoplugin` | `…-linux.nivoplugin` |
+| DexcomShare | `…-dexcomshare-macos.nivoplugin` | `…-windows.nivoplugin` | `…-linux.nivoplugin` |
 
 **Note:** GitHub Actions **workflow artifacts** are for CI debugging — not for end users. Download assets from the **GitHub Release** page instead.
 

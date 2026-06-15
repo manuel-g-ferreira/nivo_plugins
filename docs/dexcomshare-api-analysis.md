@@ -8,10 +8,13 @@ Dexcom Share is an **unofficial** REST API used by the Dexcom mobile app’s fol
 
 ## Regions
 
-| Region key | Base URL |
-|------------|----------|
-| `us` | `https://share2.dexcom.com/ShareWebServices/Services` |
-| `ous` | `https://shareous1.dexcom.com/ShareWebServices/Services` |
+| Region key | Base URL | Application ID |
+|------------|----------|----------------|
+| `us` | `https://share2.dexcom.com/ShareWebServices/Services` | `d89443d2-327c-4a6f-89e5-496bbb0317db` |
+| `ous` | `https://shareous1.dexcom.com/ShareWebServices/Services` | same as US |
+| `jp` | `https://share.dexcom.jp/ShareWebServices/Services` | `d8665ade-9673-4e27-9ff6-92db4ce13d13` |
+
+References: [pydexcom](https://github.com/gagebenne/pydexcom), [DiaKEM dexcom-api-client](https://github.com/DiaKEM/dexcom-api-client).
 
 ## Application ID
 
@@ -35,9 +38,15 @@ Two-step login:
 
 `POST /Publisher/ReadPublisherLatestGlucoseValues`
 
-```json
-{ "sessionId": "...", "minutes": 1440, "maxCount": 288 }
-```
+Query parameters (pydexcom / DiaKEM style):
+
+- `sessionId`
+- `minutes` (1–1440)
+- `maxCount` (1–288)
+
+Body: `{}`
+
+GlucoseBar also sends JSON body `{ sessionId, minutes, maxCount }`; Nivo uses query params.
 
 Response: array of `{ WT, ST, DT, Value, Trend }`.
 

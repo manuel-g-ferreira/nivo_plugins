@@ -29,7 +29,8 @@ void main() {
   });
 
   test('maps graphData history points', () {
-    final graphTime = DateTime.now().toUtc().subtract(const Duration(minutes: 30));
+    final graphTime =
+        DateTime.now().toUtc().subtract(const Duration(minutes: 30));
     final history = GlucoseMapper.historyFromGraph(
       {
         'graphData': [

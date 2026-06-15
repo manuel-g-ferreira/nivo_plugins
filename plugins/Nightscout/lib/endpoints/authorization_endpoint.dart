@@ -14,7 +14,8 @@ class AuthorizationEndpoint {
     );
     final token = body['token'] as String?;
     if (token == null || token.isEmpty) {
-      throw NightscoutException('Nightscout did not return an authorization token');
+      throw NightscoutException(
+          'Nightscout did not return an authorization token');
     }
     return token;
   }

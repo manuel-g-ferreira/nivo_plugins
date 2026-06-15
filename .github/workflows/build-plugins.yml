@@ -1,4 +1,4 @@
-# Reusable plugin build matrix (MockCGM, LibreLink, Nightscout × macOS/Windows/Linux).
+# Reusable plugin build matrix (MockCGM, LibreLink, Nightscout, DexcomShare × macOS/Windows/Linux).
 # Called by plugins.yml and release.yml.
 
 name: Build plugins
@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        plugin: [MockCGM, LibreLink, Nightscout]
+        plugin: [MockCGM, LibreLink, Nightscout, DexcomShare]
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -89,6 +89,9 @@ jobs:
       - name: Build Nightscout
         run: dart run tool/glucose_plugin.dart build --no-package plugins/Nightscout
 
+      - name: Build DexcomShare
+        run: dart run tool/glucose_plugin.dart build --no-package plugins/DexcomShare
+
       - name: MockCGM getPluginInfo
         run: echo '{"command":"getPluginInfo"}' | plugins/MockCGM/bin/linux-x64/mock-cgm | head -1 | grep -q '"success":true'
 
@@ -97,3 +100,6 @@ jobs:
 
       - name: Nightscout getPluginInfo
         run: echo '{"command":"getPluginInfo"}' | plugins/Nightscout/bin/linux-x64/nightscout-plugin | head -1 | grep -q '"nightscout"'
+
+      - name: DexcomShare getPluginInfo
+        run: echo '{"command":"getPluginInfo"}' | plugins/DexcomShare/bin/linux-x64/dexcomshare-plugin | head -1 | grep -q '"dexcomshare"'

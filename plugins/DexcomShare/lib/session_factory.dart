@@ -14,10 +14,13 @@ class SessionFactory {
 
   static DexcomHttp httpFromOptions(Map<String, String> options) {
     final region = options['region']?.trim().toLowerCase() ?? 'us';
-    return DexcomHttp(baseUrl: DexcomHttp.baseUrlForRegion(region));
+    return DexcomHttp.forRegion(region);
   }
 
   static String regionFromHttp(DexcomHttp http) {
+    if (http.baseUrl.contains('share.dexcom.jp')) {
+      return 'jp';
+    }
     if (http.baseUrl.contains('shareous1')) {
       return 'ous';
     }
@@ -26,16 +29,18 @@ class SessionFactory {
 
   static DexcomHttp? httpFromRequest(Map<String, dynamic> request) {
     final options = optionsMap(request['options']);
-    if (options.isEmpty) {
+    final region = options['region']?.trim();
+    if (region == null || region.isEmpty) {
       return null;
     }
     return httpFromOptions(options);
   }
 
-  static GlucoseService? glucoseServiceFromRequest(Map<String, dynamic> request) {
+  static GlucoseService? glucoseServiceFromRequest(
+      Map<String, dynamic> request) {
     final http = httpFromRequest(request);
-    final sessionId =
-        request['authToken'] as String? ?? optionsMap(request['options'])['sessionId'];
+    final sessionId = request['authToken'] as String? ??
+        optionsMap(request['options'])['sessionId'];
     if (http == null || sessionId == null || sessionId.isEmpty) {
       return null;
     }

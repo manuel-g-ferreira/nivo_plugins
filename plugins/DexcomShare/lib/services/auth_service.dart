@@ -14,13 +14,14 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    if (email.isEmpty || password.isEmpty) {
+    final accountName = email.trim();
+    if (accountName.isEmpty || password.isEmpty) {
       throw DexcomException('Email and password required');
     }
 
     final accountId = await AuthenticateAccountEndpoint(
       _http,
-    ).authenticate(accountName: email, password: password);
+    ).authenticate(accountName: accountName, password: password);
     if (accountId.isEmpty) {
       throw DexcomException('Dexcom did not return an account ID');
     }

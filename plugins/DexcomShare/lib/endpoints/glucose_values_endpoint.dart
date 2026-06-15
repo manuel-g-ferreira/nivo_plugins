@@ -10,12 +10,12 @@ class GlucoseValuesEndpoint {
     required int minutes,
     int maxCount = 288,
   }) {
-    return _http.postJsonList(
+    return _http.postJsonListWithQuery(
       '/Publisher/ReadPublisherLatestGlucoseValues',
       {
         'sessionId': sessionId,
-        'minutes': minutes,
-        'maxCount': maxCount,
+        'minutes': minutes.toString(),
+        'maxCount': maxCount.toString(),
       },
     );
   }
