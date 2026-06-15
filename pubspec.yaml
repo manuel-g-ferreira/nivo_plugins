@@ -1,7 +1,7 @@
 name: nivo_plugins
 description: First-party CGM plugins and authoring tools for Nivo.
 publish_to: none
-version: 1.0.0
+version: 1.0.1-beta.1
 
 environment:
   sdk: ^3.12.0
