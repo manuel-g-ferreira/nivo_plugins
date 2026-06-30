@@ -1,0 +1,21 @@
+# Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Plugin compiled binaries per platform-id (source *.dart in bin/ is tracked)
+plugins/**/bin/*/
+
+# Release / dist
+dist/
+
+# Env
+.env
+.env.*

@@ -1,0 +1,21 @@
+name: Release auth
+description: Require NIVO_RELEASE_TOKEN and configure git author for bot commits
+
+runs:
+  using: composite
+  steps:
+    - name: Require release token
+      shell: bash
+      env:
+        NIVO_RELEASE_TOKEN: ${{ env.NIVO_RELEASE_TOKEN }}
+      run: |
+        if [ -z "${NIVO_RELEASE_TOKEN}" ]; then
+          echo "::error::NIVO_RELEASE_TOKEN is required for release automation."
+          exit 1
+        fi
+
+    - name: Configure git author
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

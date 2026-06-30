@@ -1,0 +1,283 @@
+# prepare → tag (on merge) → validate → build matrix → publish (on tag push).
+# Git writes use NIVO_RELEASE_TOKEN; GITHUB_TOKEN stays read-only.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Retry build/publish for an existing tag (leave empty to open a new release PR)
+        required: false
+        type: string
+      channel:
+        description: Channel for a new release PR
+        type: choice
+        options: [stable, beta]
+        default: stable
+      bump:
+        description: Semver bump for a new release PR
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+  pull_request:
+    types: [closed]
+    branches: [main]
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: false
+
+env:
+  NIVO_RELEASE_TOKEN: ${{ secrets.NIVO_RELEASE_TOKEN }}
+
+jobs:
+  prepare:
+    name: Prepare release PR
+    if: github.event_name == 'workflow_dispatch' && inputs.tag == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/tool-setup
+
+      - uses: ./.github/actions/release-auth
+
+      - id: prep
+        run: |
+          dart run tool/release.dart prepare \
+            --channel "${{ inputs.channel }}" \
+            --bump "${{ inputs.bump }}" \
+            --no-tag
+
+      - name: Push release branch
+        env:
+          VERSION: ${{ steps.prep.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          git checkout -b "release/${VERSION}"
+          git remote set-url origin "https://x-access-token:${NIVO_RELEASE_TOKEN}@github.com/${REPO}"
+          git push -u origin "release/${VERSION}"
+
+      - name: Open release pull request
+        env:
+          GH_TOKEN: ${{ env.NIVO_RELEASE_TOKEN }}
+          VERSION: ${{ steps.prep.outputs.version }}
+          TAG: ${{ steps.prep.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh pr create \
+            --repo "${REPO}" \
+            --base main \
+            --head "release/${VERSION}" \
+            --title "Release ${VERSION}" \
+            --body "## Release ${VERSION}
+
+          - Bumps versions in \`pubspec.yaml\`, \`CHANGELOG.md\`, and all plugins
+          - Tag \`${TAG}\` is created after merge
+          - Builds \`.nivo\` packages and publishes to [\`nivo-plugin-catalog\`](https://github.com/manuel-g-ferreira/nivo-plugin-catalog) (\`catalog.json\` + \`dist/\` + GitHub Release)
+
+          Review the changelog, edit this branch if needed, then merge."
+
+  tag:
+    name: Tag release
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - uses: ./.github/actions/tool-setup
+
+      - uses: ./.github/actions/release-auth
+
+      - name: Validate release branch version
+        run: |
+          set -euo pipefail
+          BRANCH_VER="${{ github.event.pull_request.head.ref }}"
+          BRANCH_VER="${BRANCH_VER#release/}"
+          PUB_VER=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | cut -d+ -f1)
+          if [ "$BRANCH_VER" != "$PUB_VER" ]; then
+            echo "Branch release/$BRANCH_VER does not match pubspec $PUB_VER" >&2
+            exit 1
+          fi
+
+      - name: Push tag
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          dart run tool/release.dart tag
+          TAG="v$(grep '^version:' pubspec.yaml | sed 's/version: *//' | cut -d+ -f1)"
+          git remote set-url origin "https://x-access-token:${NIVO_RELEASE_TOKEN}@github.com/${REPO}"
+          git push origin "$TAG"
+
+  validate:
+    name: Validate release
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      channel: ${{ steps.meta.outputs.channel }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: ./.github/actions/tool-setup
+
+      - id: meta
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag || github.ref_name }}"
+          if echo "$TAG" | grep -qE '-beta(\.|$|-)'; then
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          PUB_VER=$(grep '^version:' pubspec.yaml | sed 's/version: *//')
+          TAG_VER="${TAG#v}"
+          if [ "$PUB_VER" != "$TAG_VER" ]; then
+            echo "pubspec version ($PUB_VER) must match tag ($TAG_VER)"
+            exit 1
+          fi
+          dart run tool/release.dart changelog extract "$TAG_VER" | head -1 >/dev/null
+
+  build:
+    name: Package · ${{ matrix.plugin }} (${{ matrix.os }})
+    needs: validate
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: [MockCGM, LibreLink, Nightscout, DexcomShare]
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - uses: ./.github/actions/plugin-build
+        with:
+          plugin: ${{ matrix.plugin }}
+          package: 'true'
+
+      - name: Stage release asset
+        env:
+          PLUGIN: ${{ matrix.plugin }}
+        run: |
+          set -euo pipefail
+          ID="$(python3 -c "import json; print(json.load(open('plugins/$PLUGIN/plugin.json'))['identifier'])")"
+          PLATFORM_ID="$(dart run tool/glucose_plugin.dart platform-id)"
+          mkdir -p release-packages
+          cp "plugins/$PLUGIN/dist/${ID}.nivo" \
+            "release-packages/${ID}-${PLATFORM_ID}.nivo"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nivo-plugins-${{ needs.validate.outputs.version }}-${{ matrix.plugin }}-${{ runner.os }}
+          retention-days: 7
+          path: release-packages/*.nivo
+
+  publish-catalog:
+    name: Publish to nivo-plugin-catalog
+    needs: [validate, build]
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      NIVO_PLUGINS_PUBLIC_TOKEN: ${{ secrets.NIVO_PLUGINS_PUBLIC_TOKEN }}
+      NIVO_RELEASE_TOKEN: ${{ secrets.NIVO_RELEASE_TOKEN }}
+      PUBLIC_REPO: ${{ vars.NIVO_PLUGINS_PUBLIC_REPO || 'manuel-g-ferreira/nivo-plugin-catalog' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - uses: ./.github/actions/tool-setup
+
+      - uses: ./.github/actions/catalog-publish-auth
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Stage release assets
+        run: dart run tool/release.dart publish stage --dist dist --output release
+
+      - name: Build catalog from release assets
+        run: |
+          set -euo pipefail
+          dart run tool/release.dart publish catalog from-assets \
+            --assets release \
+            --plugins plugins \
+            --repo "$PUBLIC_REPO" \
+            --output catalog/catalog.json
+
+      - run: dart run tool/release.dart changelog extract "${{ needs.validate.outputs.version }}" > release-notes.md
+
+      - name: Publish to nivo-plugin-catalog
+        env:
+          TAG: ${{ needs.validate.outputs.tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          PRERELEASE: ${{ needs.validate.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          args=(
+            --catalog catalog/catalog.json
+            --assets release
+            --repo "$PUBLIC_REPO"
+            --tag "$TAG"
+            --title "Nivo Plugins $VERSION"
+            --notes release-notes.md
+          )
+          if [ "$PRERELEASE" = "true" ]; then
+            args+=( --prerelease )
+          fi
+          dart run tool/release.dart publish public "${args[@]}"
+
+      - name: Verify catalog on main
+        run: |
+          set -euo pipefail
+          url="https://raw.githubusercontent.com/${PUBLIC_REPO}/main/catalog.json"
+          for attempt in 1 2 3 4 5; do
+            if curl -sf "$url" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('plugins'), 'catalog has no plugins'"; then
+              echo "Catalog live at $url"
+              exit 0
+            fi
+            echo "Waiting for catalog ($attempt/5)..."
+            sleep 10
+          done
+          echo "::error::Catalog not updated at $url"
+          exit 1

@@ -1,0 +1,36 @@
+name: Catalog publish auth
+description: Require a token that can write to the public nivo-plugin-catalog repo
+
+runs:
+  using: composite
+  steps:
+    - name: Require catalog publish token
+      shell: bash
+      env:
+        GH_TOKEN: ${{ env.GH_TOKEN }}
+        NIVO_PLUGINS_PUBLIC_TOKEN: ${{ env.NIVO_PLUGINS_PUBLIC_TOKEN }}
+        NIVO_RELEASE_TOKEN: ${{ env.NIVO_RELEASE_TOKEN }}
+      run: |
+        set -euo pipefail
+        if [ -n "${GH_TOKEN:-}" ]; then
+          echo "Catalog publish token: GH_TOKEN"
+          exit 0
+        fi
+        if [ -n "${NIVO_PLUGINS_PUBLIC_TOKEN:-}" ]; then
+          echo "GH_TOKEN=${NIVO_PLUGINS_PUBLIC_TOKEN}" >> "$GITHUB_ENV"
+          echo "Catalog publish token: NIVO_PLUGINS_PUBLIC_TOKEN"
+          exit 0
+        fi
+        if [ -n "${NIVO_RELEASE_TOKEN:-}" ]; then
+          echo "GH_TOKEN=${NIVO_RELEASE_TOKEN}" >> "$GITHUB_ENV"
+          echo "Catalog publish token: NIVO_RELEASE_TOKEN (fallback)"
+          exit 0
+        fi
+        echo "::error::Set NIVO_PLUGINS_PUBLIC_TOKEN (recommended) or NIVO_RELEASE_TOKEN with contents write on nivo-plugin-catalog."
+        exit 1
+
+    - name: Configure git author
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

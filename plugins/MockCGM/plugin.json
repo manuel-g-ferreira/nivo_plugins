@@ -1,0 +1,15 @@
+{
+  "identifier": "mockcgm",
+  "displayName": "Mock CGM",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "author": "Nivo",
+  "description": "Synthetic CGM readings for development and testing.",
+  "requiresLogin": false,
+  "entry": {
+    "darwin-arm64": "bin/darwin-arm64/mock-cgm",
+    "darwin-x64": "bin/darwin-x64/mock-cgm",
+    "windows-x64": "bin/windows-x64/mock-cgm.exe",
+    "linux-x64": "bin/linux-x64/mock-cgm"
+  }
+}

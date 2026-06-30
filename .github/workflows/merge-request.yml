@@ -1,0 +1,137 @@
+# Quality gate for pull requests and main.
+name: Merge Request
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - run: dart format --output=none --set-exit-if-changed .
+
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - run: dart analyze --fatal-infos
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - run: dart test
+
+  catalog:
+    name: Catalog build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/tool-setup
+
+      - name: Build catalog from plugin manifests
+        run: |
+          set -euo pipefail
+          dart run tool/release.dart publish catalog from-plugins \
+            --plugins plugins \
+            --repo manuel-g-ferreira/nivo-plugin-catalog \
+            --output /tmp/catalog.json
+          python3 -c "import json; d=json.load(open('/tmp/catalog.json')); assert len(d['plugins']) == 4"
+
+      - name: Catalog matches committed catalog.json
+        run: |
+          set -euo pipefail
+          dart run tool/release.dart publish catalog from-plugins \
+            --plugins plugins \
+            --repo manuel-g-ferreira/nivo-plugin-catalog \
+            --output /tmp/catalog-built.json
+          if [ -f catalog/catalog.json ]; then
+            python3 - <<'PY'
+import json
+from pathlib import Path
+committed = json.loads(Path("catalog/catalog.json").read_text())
+built = json.loads(Path("/tmp/catalog-built.json").read_text())
+assert committed["plugins"] == built["plugins"], "catalog/catalog.json is stale — run catalog from-plugins and commit"
+PY
+          fi
+
+  plugin-tests:
+    name: Plugin tests · ${{ matrix.plugin }}
+    needs: [format, analyze, test, catalog]
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: [LibreLink, DexcomShare, Nightscout]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - run: cd "plugins/${{ matrix.plugin }}" && dart test
+
+  integration:
+    name: Protocol smoke
+    needs: [format, analyze, test, catalog]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - run: |
+          set -euo pipefail
+          for plugin in MockCGM LibreLink Nightscout DexcomShare; do
+            dart run tool/glucose_plugin.dart build --no-package "plugins/$plugin"
+          done
+          echo '{"command":"getPluginInfo"}' | plugins/MockCGM/bin/linux-x64/mock-cgm | head -1 | grep -q '"success":true'
+          echo '{"command":"getPluginInfo"}' | plugins/LibreLink/bin/linux-x64/librelink-plugin | head -1 | grep -q '"librelink"'
+          echo '{"command":"getPluginInfo"}' | plugins/Nightscout/bin/linux-x64/nightscout-plugin | head -1 | grep -q '"nightscout"'
+          echo '{"command":"getPluginInfo"}' | plugins/DexcomShare/bin/linux-x64/dexcomshare-plugin | head -1 | grep -q '"dexcomshare"'
+
+  build:
+    name: Build · ${{ matrix.plugin }} (${{ matrix.os }})
+    needs: [format, analyze, test, catalog]
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: [MockCGM, LibreLink, Nightscout, DexcomShare]
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/plugin-build
+        with:
+          plugin: ${{ matrix.plugin }}

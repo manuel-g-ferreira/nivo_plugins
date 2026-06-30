@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "name": "Nivo plugins",
+  "plugins": [
+    {
+      "id": "dexcomshare",
+      "name": "Dexcom",
+      "description": "Dexcom Share glucose readings via Dexcom's cloud API.",
+      "version": "1.0.0",
+      "verified": true,
+      "downloads": {
+        "darwin-arm64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/dexcomshare-darwin-arm64.nivo",
+        "windows-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/dexcomshare-windows-x64.nivo",
+        "linux-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/dexcomshare-linux-x64.nivo"
+      }
+    },
+    {
+      "id": "librelink",
+      "name": "LibreLink Up",
+      "description": "LibreLink Up glucose readings via Abbott's cloud API.",
+      "version": "1.0.0",
+      "verified": true,
+      "downloads": {
+        "darwin-arm64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/librelink-darwin-arm64.nivo",
+        "windows-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/librelink-windows-x64.nivo",
+        "linux-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/librelink-linux-x64.nivo"
+      }
+    },
+    {
+      "id": "mockcgm",
+      "name": "Mock CGM",
+      "description": "Synthetic CGM readings for development and testing.",
+      "version": "1.0.0",
+      "verified": true,
+      "downloads": {
+        "darwin-arm64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/mockcgm-darwin-arm64.nivo",
+        "windows-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/mockcgm-windows-x64.nivo",
+        "linux-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/mockcgm-linux-x64.nivo"
+      }
+    },
+    {
+      "id": "nightscout",
+      "name": "Nightscout",
+      "description": "Glucose data from a self-hosted Nightscout instance.",
+      "version": "1.0.0",
+      "verified": true,
+      "downloads": {
+        "darwin-arm64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/nightscout-darwin-arm64.nivo",
+        "windows-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/nightscout-windows-x64.nivo",
+        "linux-x64": "https://raw.githubusercontent.com/manuel-g-ferreira/nivo-plugin-catalog/main/dist/nightscout-linux-x64.nivo"
+      }
+    }
+  ]
+}

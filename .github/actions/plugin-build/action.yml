@@ -1,0 +1,26 @@
+name: Build plugin
+description: Compile a plugin binary, optionally package as .nivo
+
+inputs:
+  plugin:
+    description: Plugin directory name (e.g. MockCGM)
+    required: true
+  package:
+    description: Create dist/<id>.nivo after compile
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup
+
+    - name: Build
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "${{ inputs.package }}" = "true" ]; then
+          dart run tool/glucose_plugin.dart build "plugins/${{ inputs.plugin }}"
+        else
+          dart run tool/glucose_plugin.dart build --no-package "plugins/${{ inputs.plugin }}"
+        fi

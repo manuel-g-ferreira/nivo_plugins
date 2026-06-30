@@ -1,0 +1,15 @@
+name: nightscout_plugin
+description: Nightscout CGM plugin for Nivo (JSON line protocol v1).
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  nivo_plugins:
+    path: ../..
+  crypto: ^3.0.6
+
+dev_dependencies:
+  test: ^1.25.0

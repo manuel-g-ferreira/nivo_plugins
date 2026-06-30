@@ -1,0 +1,31 @@
+name: Setup
+description: Dart SDK, pub cache, and all plugin package resolution
+
+runs:
+  using: composite
+  steps:
+    - uses: dart-lang/setup-dart@v1
+      with:
+        sdk: "3.12.0"
+
+    - name: Cache pub dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+          .dart_tool
+          plugins/*/.dart_tool
+        key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'plugins/*/pubspec.lock') }}
+        restore-keys: |
+          pub-${{ runner.os }}-
+
+    - name: Resolve dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        dart pub get
+        for dir in plugins/*/; do
+          if [ -f "${dir}pubspec.yaml" ]; then
+            (cd "$dir" && dart pub get)
+          fi
+        done

@@ -1,0 +1,13 @@
+name: Tool setup
+description: Dart SDK and root pub get (for tool/release.dart only)
+
+runs:
+  using: composite
+  steps:
+    - uses: dart-lang/setup-dart@v1
+      with:
+        sdk: "3.12.0"
+
+    - name: Resolve dependencies
+      shell: bash
+      run: dart pub get
